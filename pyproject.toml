@@ -26,7 +26,7 @@ classifiers = [
 ]
 keywords = ["database", "embedded", "ai", "agents", "vector", "kv"]
 authors = [
-    {name = "Strata Systems"}
+    {name = "StrataDB Labs"}
 ]
 
 [project.optional-dependencies]
@@ -37,8 +37,8 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/strata-systems/strata-python"
-Repository = "https://github.com/strata-systems/strata-python"
+Homepage = "https://stratadb.org"
+Repository = "https://github.com/stratadb-labs/strata-python"
 Documentation = "https://stratadb.org"
 
 [tool.maturin]
