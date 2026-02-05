@@ -188,6 +188,20 @@ impl PyStrata {
         self.inner.state_cas(cell, expected_version, new).map_err(to_py_err)
     }
 
+    /// Get version history for a state cell.
+    fn state_history(&self, py: Python<'_>, cell: &str) -> PyResult<PyObject> {
+        match self.inner.state_getv(cell).map_err(to_py_err)? {
+            Some(versions) => {
+                let list = PyList::empty_bound(py);
+                for vv in versions {
+                    list.append(versioned_to_py(py, vv))?;
+                }
+                Ok(list.unbind().into_any())
+            }
+            None => Ok(py.None()),
+        }
+    }
+
     // =========================================================================
     // Event Log
     // =========================================================================
@@ -242,6 +256,20 @@ impl PyStrata {
     /// Delete a JSON document.
     fn json_delete(&self, key: &str, path: &str) -> PyResult<u64> {
         self.inner.json_delete(key, path).map_err(to_py_err)
+    }
+
+    /// Get version history for a JSON document.
+    fn json_history(&self, py: Python<'_>, key: &str) -> PyResult<PyObject> {
+        match self.inner.json_getv(key).map_err(to_py_err)? {
+            Some(versions) => {
+                let list = PyList::empty_bound(py);
+                for vv in versions {
+                    list.append(versioned_to_py(py, vv))?;
+                }
+                Ok(list.unbind().into_any())
+            }
+            None => Ok(py.None()),
+        }
     }
 
     /// List JSON document keys.

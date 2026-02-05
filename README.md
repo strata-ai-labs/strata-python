@@ -150,6 +150,7 @@ if new_version is None:
 | `state_get(cell)` | Get value |
 | `state_init(cell, value)` | Initialize if not exists |
 | `state_cas(cell, new_value, expected_version)` | Compare-and-swap (version-based) |
+| `state_history(cell)` | Get version history |
 
 ### Event Log
 
@@ -167,6 +168,7 @@ if new_version is None:
 | `json_set(key, path, value)` | Set at JSONPath |
 | `json_get(key, path)` | Get at JSONPath |
 | `json_delete(key, path)` | Delete |
+| `json_history(key)` | Get version history |
 | `json_list(limit, prefix, cursor)` | List keys |
 
 ### Vector Store
