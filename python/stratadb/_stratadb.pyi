@@ -620,6 +620,10 @@ class Strata:
         query: str,
         k: Optional[int] = None,
         primitives: Optional[list[str]] = None,
+        time_range: Optional[dict[str, str]] = None,
+        mode: Optional[str] = None,
+        expand: Optional[bool] = None,
+        rerank: Optional[bool] = None,
     ) -> list[dict[str, Any]]:
         """Search across multiple primitives for matching content.
 

@@ -619,6 +619,29 @@ class Strata:
         """
         self._inner.configure_model(endpoint, model, api_key=api_key, timeout_ms=timeout_ms)
 
+    # -- Search ---------------------------------------------------------------
+
+    def search(self, query, *, k=None, primitives=None, time_range=None,
+               mode=None, expand=None, rerank=None):
+        """Search across multiple primitives for matching content.
+
+        Args:
+            query: Natural-language or keyword query string.
+            k: Number of results to return (default: 10).
+            primitives: Restrict to specific primitives (e.g. ``["kv", "json"]``).
+            time_range: Time range filter as ``{"start": str, "end": str}`` (ISO 8601).
+            mode: Search mode: ``"keyword"`` or ``"hybrid"`` (default: ``"hybrid"``).
+            expand: Enable/disable query expansion (default: auto).
+            rerank: Enable/disable reranking (default: auto).
+
+        Returns:
+            List of ``{"entity", "primitive", "score", "rank", "snippet"}`` dicts.
+        """
+        return self._inner.search(
+            query, k=k, primitives=primitives, time_range=time_range,
+            mode=mode, expand=expand, rerank=rerank,
+        )
+
     # -- Properties -----------------------------------------------------------
 
     @property

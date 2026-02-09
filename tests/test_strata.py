@@ -1179,3 +1179,43 @@ class TestSnapshotTimeTravel:
         time.sleep(0.05)
         db.kv.put("inline", "v2")
         assert db.kv.get("inline", as_of=ts) == "v1"
+
+
+class TestSearch:
+    """Tests for structured search (v0.12.5)."""
+
+    def test_search_empty_database(self, db):
+        results = db.search("hello")
+        assert results == []
+
+    def test_search_with_data(self, db):
+        db.kv.put("greeting", "hello world")
+        db.kv.put("farewell", "goodbye world")
+        results = db.search("hello")
+        assert isinstance(results, list)
+
+    def test_search_with_primitives_filter(self, db):
+        db.kv.put("k1", "data")
+        results = db.search("data", primitives=["kv"])
+        assert isinstance(results, list)
+
+    def test_search_with_mode(self, db):
+        results = db.search("test", mode="keyword")
+        assert isinstance(results, list)
+
+    def test_search_with_expand_rerank_disabled(self, db):
+        results = db.search("test", expand=False, rerank=False)
+        assert isinstance(results, list)
+
+    def test_search_with_time_range(self, db):
+        results = db.search(
+            "test",
+            time_range={"start": "2020-01-01T00:00:00Z", "end": "2030-01-01T00:00:00Z"},
+        )
+        assert isinstance(results, list)
+
+    def test_search_via_wrapper(self, db):
+        """Verify search works through the Strata wrapper class."""
+        assert hasattr(db, "search")
+        results = db.search("anything", k=5, mode="hybrid")
+        assert isinstance(results, list)

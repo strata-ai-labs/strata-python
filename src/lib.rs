@@ -12,8 +12,8 @@ use std::sync::Mutex;
 use ::stratadb::{
     AccessMode, BatchVectorEntry, BranchExportResult, BranchImportResult, BundleValidateResult,
     CollectionInfo, Command, DistanceMetric, Error as StrataError, FilterOp, MergeStrategy,
-    MetadataFilter, OpenOptions, Output, Session, Strata as RustStrata, Value,
-    VersionedBranchInfo, VersionedValue,
+    MetadataFilter, OpenOptions, Output, SearchQuery, Session, Strata as RustStrata,
+    TimeRangeInput, Value, VersionedBranchInfo, VersionedValue,
 };
 
 // =============================================================================
@@ -1425,23 +1425,49 @@ impl PyStrata {
     /// Search across multiple primitives for matching content.
     ///
     /// Returns a list of dicts with 'entity', 'primitive', 'score', 'rank', 'snippet'.
-    #[pyo3(signature = (query, k=None, primitives=None))]
+    #[pyo3(signature = (query, k=None, primitives=None, time_range=None, mode=None, expand=None, rerank=None))]
     fn search(
         &self,
         py: Python<'_>,
         query: &str,
         k: Option<u64>,
         primitives: Option<Vec<String>>,
+        time_range: Option<&Bound<'_, PyDict>>,
+        mode: Option<&str>,
+        expand: Option<bool>,
+        rerank: Option<bool>,
     ) -> PyResult<PyObject> {
+        let tr = if let Some(dict) = time_range {
+            let start: String = dict
+                .get_item("start")?
+                .ok_or_else(|| PyRuntimeError::new_err("time_range missing 'start' key"))?
+                .extract()?;
+            let end: String = dict
+                .get_item("end")?
+                .ok_or_else(|| PyRuntimeError::new_err("time_range missing 'end' key"))?
+                .extract()?;
+            Some(TimeRangeInput { start, end })
+        } else {
+            None
+        };
+
+        let sq = SearchQuery {
+            query: query.to_string(),
+            k,
+            primitives,
+            time_range: tr,
+            mode: mode.map(|s| s.to_string()),
+            expand,
+            rerank,
+        };
+
         match self
             .inner
             .executor()
             .execute(Command::Search {
                 branch: None,
                 space: None,
-                query: query.to_string(),
-                k,
-                primitives,
+                search: sq,
             })
             .map_err(to_py_err)?
         {
