@@ -1387,6 +1387,42 @@ impl PyStrata {
     // Model Configuration
     // =========================================================================
 
+    /// Get the current database configuration.
+    ///
+    /// Returns a dict with 'durability', 'auto_embed', and optional 'model'.
+    fn config(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let cfg = self.inner.config();
+        let dict = PyDict::new_bound(py);
+        dict.set_item("durability", &cfg.durability)?;
+        dict.set_item("auto_embed", cfg.auto_embed)?;
+        if let Some(ref model) = cfg.model {
+            let model_dict = PyDict::new_bound(py);
+            model_dict.set_item("endpoint", &model.endpoint)?;
+            model_dict.set_item("model", &model.model)?;
+            match &model.api_key {
+                Some(key) => model_dict.set_item("api_key", key)?,
+                None => model_dict.set_item("api_key", py.None())?,
+            };
+            model_dict.set_item("timeout_ms", model.timeout_ms)?;
+            dict.set_item("model", model_dict)?;
+        } else {
+            dict.set_item("model", py.None())?;
+        }
+        Ok(dict.unbind().into_any())
+    }
+
+    /// Check whether auto-embedding is enabled.
+    fn auto_embed_enabled(&self) -> bool {
+        self.inner.auto_embed_enabled()
+    }
+
+    /// Enable or disable auto-embedding of text values.
+    ///
+    /// Persisted to strata.toml for disk-backed databases.
+    fn set_auto_embed(&self, enabled: bool) -> PyResult<()> {
+        self.inner.set_auto_embed(enabled).map_err(to_py_err)
+    }
+
     /// Configure an inference model endpoint for intelligent search.
     ///
     /// When a model is configured, `search()` transparently expands queries

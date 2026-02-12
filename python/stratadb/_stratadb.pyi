@@ -103,7 +103,23 @@ class Strata:
         """
         ...
 
-    # -- Model Configuration --------------------------------------------------
+    # -- Configuration --------------------------------------------------------
+
+    def config(self) -> dict[str, Any]:
+        """Get the current database configuration.
+
+        Returns a dict with ``"durability"``, ``"auto_embed"``, and
+        ``"model"`` (a dict or ``None``).
+        """
+        ...
+
+    def auto_embed_enabled(self) -> bool:
+        """Check whether auto-embedding is enabled."""
+        ...
+
+    def set_auto_embed(self, enabled: bool) -> None:
+        """Enable or disable auto-embedding. Persisted to ``strata.toml``."""
+        ...
 
     def configure_model(
         self,
@@ -113,6 +129,8 @@ class Strata:
         timeout_ms: Optional[int] = None,
     ) -> None:
         """Configure an inference model endpoint for intelligent search.
+
+        Persisted to ``strata.toml``.
 
         Args:
             endpoint: OpenAI-compatible API endpoint URL.

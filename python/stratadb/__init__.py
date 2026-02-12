@@ -602,14 +602,38 @@ class Strata:
         """Download model files for auto-embedding."""
         return _Strata.setup()
 
-    # -- Model configuration --------------------------------------------------
+    # -- Configuration --------------------------------------------------------
+
+    def config(self):
+        """Get the current database configuration.
+
+        Returns a dict with ``"durability"``, ``"auto_embed"``, and
+        ``"model"`` (a dict with ``"endpoint"``, ``"model"``, ``"api_key"``,
+        ``"timeout_ms"``, or ``None``).
+        """
+        return self._inner.config()
+
+    @property
+    def auto_embed_enabled(self):
+        """Whether automatic text embedding is currently enabled (read-only)."""
+        return self._inner.auto_embed_enabled()
+
+    def set_auto_embed(self, enabled):
+        """Enable or disable automatic text embedding.
+
+        Persisted to ``strata.toml`` for disk-backed databases.
+
+        Args:
+            enabled: Whether to enable auto-embed.
+        """
+        self._inner.set_auto_embed(enabled)
 
     def configure_model(self, endpoint, model, api_key=None, timeout_ms=None):
         """Configure an inference model endpoint for intelligent search.
 
         When a model is configured, ``search()`` transparently expands queries
         using the model for better recall.  Without a model, search works the
-        same as before.
+        same as before.  Persisted to ``strata.toml``.
 
         Args:
             endpoint: OpenAI-compatible API endpoint URL (e.g. ``"http://localhost:11434/v1"``).

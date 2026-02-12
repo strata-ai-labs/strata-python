@@ -1211,6 +1211,40 @@ class TestSnapshotTimeTravel:
         assert db.kv.get("inline", as_of=ts) == "v1"
 
 
+class TestConfiguration:
+    """Tests for config(), auto_embed_enabled, set_auto_embed, configure_model."""
+
+    def test_config_defaults(self, db):
+        cfg = db.config()
+        assert cfg["durability"] == "standard"
+        assert cfg["auto_embed"] is False
+        assert cfg["model"] is None
+
+    def test_auto_embed_enabled_default(self, db):
+        assert db.auto_embed_enabled is False
+
+    def test_configure_model_persists_in_config(self, db):
+        db.configure_model("http://localhost:11434/v1", "qwen3:1.7b")
+        cfg = db.config()
+        assert cfg["model"] is not None
+        assert cfg["model"]["endpoint"] == "http://localhost:11434/v1"
+        assert cfg["model"]["model"] == "qwen3:1.7b"
+        assert cfg["model"]["timeout_ms"] == 5000
+
+    def test_configure_model_with_api_key(self, db):
+        db.configure_model(
+            "http://localhost:11434/v1", "qwen3:1.7b",
+            api_key="sk-test", timeout_ms=10000,
+        )
+        cfg = db.config()
+        assert cfg["model"]["api_key"] == "sk-test"
+        assert cfg["model"]["timeout_ms"] == 10000
+
+    def test_auto_embed_enabled_is_property(self, db):
+        """auto_embed_enabled is a property, not a method."""
+        assert not callable(db.auto_embed_enabled)
+
+
 class TestSearch:
     """Tests for structured search (v0.12.5)."""
 
