@@ -402,6 +402,23 @@ class Strata:
         """
         ...
 
+    def json_batch_get(self, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Batch get multiple JSON document paths in a single call.
+
+        Each entry dict must have ``"key"`` and ``"path"`` keys.
+        Returns a list of ``{"value", "version", "timestamp", "error"}`` dicts
+        (positionally mapped).
+        """
+        ...
+
+    def json_batch_delete(self, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Batch delete multiple JSON document paths in a single transaction.
+
+        Each entry dict must have ``"key"`` and ``"path"`` keys.
+        Returns a list of ``{"version", "error"}`` dicts (positionally mapped).
+        """
+        ...
+
     # -- Vector Store ---------------------------------------------------------
 
     def vector_create_collection(

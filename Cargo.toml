@@ -1,10 +1,10 @@
 [package]
 name = "stratadb-python"
-version = "0.14.4"
+version = "0.14.5"
 edition = "2021"
 description = "Python bindings for StrataDB"
 license = "MIT"
-repository = "https://github.com/strata-ai-labs/strata-python"
+repository = "https://github.com/stratalab/strata-python"
 
 [lib]
 name = "_stratadb"
@@ -21,11 +21,11 @@ numpy = "0.22"
 
 # Use path dependency for local development
 # stratadb = { path = "../strata-core" }
-stratadb = { git = "https://github.com/strata-ai-labs/strata-core", branch = "main" }
+stratadb = { git = "https://github.com/stratalab/strata-core", branch = "main" }
 
 # Intelligence crate for model download (embed feature only)
 # strata-intelligence = { path = "../strata-core/crates/intelligence", features = ["embed"], optional = true }
-strata-intelligence = { git = "https://github.com/strata-ai-labs/strata-core", branch = "main", features = ["embed"], optional = true }
+strata-intelligence = { git = "https://github.com/stratalab/strata-core", branch = "main", features = ["embed"], optional = true }
 
 [build-dependencies]
 pyo3-build-config = "0.22"

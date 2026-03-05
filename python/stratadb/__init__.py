@@ -232,6 +232,29 @@ class JSONNamespace:
         """
         return self._db.json_batch_set(entries)
 
+    def batch_get(self, entries):
+        """Batch get multiple JSON document paths in a single call.
+
+        Args:
+            entries: List of dicts with ``"key"`` and ``"path"`` keys.
+
+        Returns:
+            List of dicts with ``"value"``, ``"version"``, ``"timestamp"``
+            (on success) or ``"error"`` (on failure).
+        """
+        return self._db.json_batch_get(entries)
+
+    def batch_delete(self, entries):
+        """Batch delete multiple JSON document paths in a single transaction.
+
+        Args:
+            entries: List of dicts with ``"key"`` and ``"path"`` keys.
+
+        Returns:
+            List of dicts with ``"version"`` (on success) or ``"error"`` (on failure).
+        """
+        return self._db.json_batch_delete(entries)
+
 
 class Collection:
     """Handle for a single vector collection.
@@ -1195,4 +1218,4 @@ __all__ = [
     "AccessDeniedError",
     "IoError",
 ]
-__version__ = "0.14.4"
+__version__ = "0.14.5"

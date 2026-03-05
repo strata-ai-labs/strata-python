@@ -784,6 +784,57 @@ class TestNamespaceJSON:
         assert db.json.get("tt_js", as_of=ts)["v"] == 1
 
 
+    def test_json_batch_get(self, db):
+        """batch_get returns values for multiple keys."""
+        db.json.set("bg1", "$", {"a": 1})
+        db.json.set("bg2", "$", {"b": 2})
+        results = db.json.batch_get([
+            {"key": "bg1", "path": "$"},
+            {"key": "bg2", "path": "$"},
+        ])
+        assert len(results) == 2
+        assert results[0]["value"]["a"] == 1
+        assert results[0]["version"] is not None
+        assert results[0]["timestamp"] is not None
+        assert results[0]["error"] is None
+        assert results[1]["value"]["b"] == 2
+
+    def test_json_batch_get_missing(self, db):
+        """batch_get with mix of found and not-found keys."""
+        db.json.set("bg_exists", "$", {"x": 42})
+        results = db.json.batch_get([
+            {"key": "bg_exists", "path": "$"},
+            {"key": "bg_missing", "path": "$"},
+        ])
+        assert len(results) == 2
+        assert results[0]["value"]["x"] == 42
+        assert results[1]["value"] is None
+        assert results[1]["version"] is None
+
+    def test_json_batch_delete(self, db):
+        """batch_delete removes multiple documents."""
+        db.json.set("bd1", "$", {"a": 1})
+        db.json.set("bd2", "$", {"b": 2})
+        results = db.json.batch_delete([
+            {"key": "bd1", "path": "$"},
+            {"key": "bd2", "path": "$"},
+        ])
+        assert len(results) == 2
+        assert results[0]["version"] is not None
+        assert results[0]["error"] is None
+        # Verify docs are gone
+        assert db.json.get("bd1") is None
+        assert db.json.get("bd2") is None
+
+    def test_json_batch_delete_nonexistent(self, db):
+        """batch_delete of nonexistent key returns version 0."""
+        results = db.json.batch_delete([
+            {"key": "bd_nope", "path": "$"},
+        ])
+        assert len(results) == 1
+        assert results[0]["version"] == 0
+
+
 class TestNamespaceVectors:
     """Tests for db.vectors namespace and Collection."""
 

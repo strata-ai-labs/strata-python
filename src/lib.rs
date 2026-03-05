@@ -10,10 +10,11 @@ use std::collections::HashMap;
 use std::sync::Mutex;
 
 use ::stratadb::{
-    AccessMode, BatchEventEntry, BatchItemResult, BatchJsonEntry, BatchKvEntry, BatchStateEntry,
-    BatchVectorEntry, BranchExportResult, BranchImportResult, BundleValidateResult,
-    CollectionInfo, Command, DistanceMetric, Error as StrataError, FilterOp, GenerationResult,
-    MergeStrategy, MetadataFilter, ModelInfoOutput, OpenOptions, Output, SearchQuery, Session,
+    AccessMode, BatchEventEntry, BatchGetItemResult, BatchItemResult, BatchJsonDeleteEntry,
+    BatchJsonEntry, BatchJsonGetEntry, BatchKvEntry, BatchStateEntry, BatchVectorEntry,
+    BranchExportResult, BranchImportResult, BundleValidateResult, CollectionInfo, Command,
+    DistanceMetric, Error as StrataError, FilterOp, GenerationResult, MergeStrategy,
+    MetadataFilter, ModelInfoOutput, OpenOptions, Output, SearchQuery, Session,
     Strata as RustStrata, TimeRangeInput, TokenizeResult, Value, VersionedBranchInfo,
     VersionedValue, WalCounters,
 };
@@ -50,14 +51,14 @@ fn py_to_value(obj: &Bound<'_, PyAny>) -> PyResult<Value> {
             .iter()
             .map(|item| py_to_value(&item))
             .collect();
-        Ok(Value::Array(values?))
+        Ok(Value::Array(Box::new(values?)))
     } else if let Ok(dict) = obj.downcast::<PyDict>() {
         let mut map = HashMap::new();
         for (key, val) in dict.iter() {
             let key_str: String = key.extract()?;
             map.insert(key_str, py_to_value(&val)?);
         }
-        Ok(Value::Object(map))
+        Ok(Value::Object(Box::new(map)))
     } else {
         Err(ValidationError::new_err("Unsupported value type"))
     }
@@ -75,14 +76,14 @@ fn value_to_py(py: Python<'_>, value: Value) -> PyResult<PyObject> {
         Value::Bytes(b) => Ok(b.to_object(py)),
         Value::Array(arr) => {
             let list = PyList::empty_bound(py);
-            for item in arr {
+            for item in *arr {
                 list.append(value_to_py(py, item)?)?;
             }
             Ok(list.unbind().into_any())
         }
         Value::Object(map) => {
             let dict = PyDict::new_bound(py);
-            for (k, v) in map {
+            for (k, v) in *map {
                 dict.set_item(k, value_to_py(py, v)?)?;
             }
             Ok(dict.unbind().into_any())
@@ -925,6 +926,84 @@ impl PyStrata {
             Output::BatchResults(results) => batch_results_to_py(py, results),
             _ => Err(PyRuntimeError::new_err(
                 "Unexpected output for JsonBatchSet",
+            )),
+        }
+    }
+
+    /// Batch get multiple JSON document paths in a single call.
+    fn json_batch_get(
+        &self,
+        py: Python<'_>,
+        entries: &Bound<'_, PyList>,
+    ) -> PyResult<PyObject> {
+        let batch: Vec<BatchJsonGetEntry> = entries
+            .iter()
+            .map(|item| {
+                let dict = item.downcast::<PyDict>()?;
+                let key: String = dict
+                    .get_item("key")?
+                    .ok_or_else(|| ValidationError::new_err("missing 'key'"))?
+                    .extract()?;
+                let path: String = dict
+                    .get_item("path")?
+                    .ok_or_else(|| ValidationError::new_err("missing 'path'"))?
+                    .extract()?;
+                Ok(BatchJsonGetEntry { key, path })
+            })
+            .collect::<PyResult<_>>()?;
+
+        match self
+            .inner
+            .executor()
+            .execute(Command::JsonBatchGet {
+                branch: None,
+                space: None,
+                entries: batch,
+            })
+            .map_err(to_py_err)?
+        {
+            Output::BatchGetResults(results) => batch_get_results_to_py(py, results),
+            _ => Err(PyRuntimeError::new_err(
+                "Unexpected output for JsonBatchGet",
+            )),
+        }
+    }
+
+    /// Batch delete multiple JSON document paths in a single transaction.
+    fn json_batch_delete(
+        &self,
+        py: Python<'_>,
+        entries: &Bound<'_, PyList>,
+    ) -> PyResult<PyObject> {
+        let batch: Vec<BatchJsonDeleteEntry> = entries
+            .iter()
+            .map(|item| {
+                let dict = item.downcast::<PyDict>()?;
+                let key: String = dict
+                    .get_item("key")?
+                    .ok_or_else(|| ValidationError::new_err("missing 'key'"))?
+                    .extract()?;
+                let path: String = dict
+                    .get_item("path")?
+                    .ok_or_else(|| ValidationError::new_err("missing 'path'"))?
+                    .extract()?;
+                Ok(BatchJsonDeleteEntry { key, path })
+            })
+            .collect::<PyResult<_>>()?;
+
+        match self
+            .inner
+            .executor()
+            .execute(Command::JsonBatchDelete {
+                branch: None,
+                space: None,
+                entries: batch,
+            })
+            .map_err(to_py_err)?
+        {
+            Output::BatchResults(results) => batch_results_to_py(py, results),
+            _ => Err(PyRuntimeError::new_err(
+                "Unexpected output for JsonBatchDelete",
             )),
         }
     }
@@ -1835,6 +1914,7 @@ impl PyStrata {
                 top_p,
                 seed,
                 stop_tokens,
+                stop_sequences: None,
             })
             .map_err(to_py_err)?
         {
@@ -2078,6 +2158,35 @@ fn batch_results_to_py(py: Python<'_>, results: Vec<BatchItemResult>) -> PyResul
         match r.version {
             Some(v) => dict.set_item("version", v)?,
             None => dict.set_item("version", py.None())?,
+        };
+        match r.error {
+            Some(e) => dict.set_item("error", e)?,
+            None => dict.set_item("error", py.None())?,
+        };
+        list.append(dict)?;
+    }
+    Ok(list.unbind().into_any())
+}
+
+/// Convert Vec<BatchGetItemResult> to a Python list of dicts.
+fn batch_get_results_to_py(
+    py: Python<'_>,
+    results: Vec<BatchGetItemResult>,
+) -> PyResult<PyObject> {
+    let list = PyList::empty_bound(py);
+    for r in results {
+        let dict = PyDict::new_bound(py);
+        match r.value {
+            Some(v) => dict.set_item("value", value_to_py(py, v)?)?,
+            None => dict.set_item("value", py.None())?,
+        };
+        match r.version {
+            Some(v) => dict.set_item("version", v)?,
+            None => dict.set_item("version", py.None())?,
+        };
+        match r.timestamp {
+            Some(t) => dict.set_item("timestamp", t)?,
+            None => dict.set_item("timestamp", py.None())?,
         };
         match r.error {
             Some(e) => dict.set_item("error", e)?,
